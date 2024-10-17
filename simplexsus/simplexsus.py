@@ -1,5 +1,5 @@
-"""""
-Программа реализует симплекс-метод для решения задач линейного программирования
+"""
+Программа реализует симплекс-метод для решения задач линейного программирования.
 Содержит функции для проверки входных данных, создания симплекс-таблицы,
 поиска разрешающего элемента, выполнения итераций симплекс-метода и вывода
 результатов на экран.
@@ -31,10 +31,6 @@ def check_simplex_table(c, A, b):
         if len(row) != len_A:
             return False  # Длина строки не соответствует ожидаемой
 
-        # for num in row:
-        #     if num < 0:
-        #         return False    # Неподходящее значение
-
     # Проверяем, что длины векторов c и b соответствуют количеству строк в A
     if (len(c) != len_A) or (len(b) != len(A)):
         return False
@@ -51,10 +47,10 @@ def check_simplex_response(c, A, b):
         return False  # Все коэффициенты равны нулю
 
     for row in range(len(b)):
-        if b[row] < 0:  # Если есть отрицательный элемент в b
-            for col in range(len(A[0])):
+        if b[row] < 0:                      # Если есть отрицательный элемент в b
+            for col in range(len(A[0])):    # Ошибка в исходном коде: A должен быть матрицей
                 if min(A[row]) >= 0:
-                    return False  # Нет подходящих коэффициентов
+                    return False            # Нет подходящих коэффициентов
 
     return True  # Существуют отрицательные коэффициенты
 
@@ -75,17 +71,39 @@ def create_simplex_table(c, A, b, f):
     return table
 
 
-def print_simplex_table(simplex_table):
+def create_simplex_variables(A):
     """
-    Выводит матрицу в терминал.
+    Создает имена переменных для метода симплекс-метода.
     """
+    var_col = ["b"] + [f"x{i+1}" for i in range(len(A[0]))]
+    var_row = [f"x{i+1+len(var_col)}" for i in range(len(A))] + ["F "]
+    return var_row, var_col
+
+
+def print_simplex_table(simplex_table, var_row, var_col):
+    """
+    Выводит симплекс-таблицу в терминал с заголовками.
+    """
+    print()
+
     # Определяем максимальную ширину для форматирования
-    max_width = max(len(str(float(j))) for row in simplex_table for j in row) + 2
+    # max_width = max(len(str(float(j))) for row in simplex_table for j in row) + 2
+    max_width = 6
+
+    # Выводим заголовки
+    headers = [var_col[i] for i in range(len(simplex_table[0]))]
+    print("    ", " | ".join(f"{header:>{max_width}}" for header in headers))
+    print("----", "-" * (max_width * len(headers) + 4 * (len(headers) - 1)), sep="")
 
     for i in range(len(simplex_table)):
+        print(var_row[i], end=" | ")
+
         for j in simplex_table[i]:
             # Выравнивание по правому краю, 2 знака после запятой
-            print(f"{float(j):>{max_width}.2f}", end=" | ")
+            if j == 0:
+                print(f"{float(0):>{max_width}.2f}", end=" | ")
+            else:
+                print(f"{round(float(j), 2):>{max_width}.2f}", end=" | ")
         print()
 
 
@@ -94,7 +112,6 @@ def find_simplex_resolve(c, A, b):
     Находит разрешающий элемент в симплекс-методе.
     Возвращает информацию о минимальном отношении или специальные строки.
     """
-
     if check_simplex_response(c, A, b):
         # Проверяем, корректна ли симплекс-таблица
 
@@ -148,34 +165,19 @@ def find_min_ratio(A, b, min_ratio_col):
     return [A[min_ratio_row][min_ratio_col], min_ratio_row, min_ratio_col]
 
 
+def swap_variables(var_row, var_col, simplex_resolve):
+    """
+    Меняет местами элементы в двух списках на основе указаний,
+    полученных из решения симплекс-метода.
+    """
+    var_row[simplex_resolve[1]], var_col[simplex_resolve[2] + 1] = var_col[simplex_resolve[2] + 1], var_row[simplex_resolve[1]]
+    return var_row, var_col
+
+
 def simplex_table_iteration(c, A, b, f, simplex_resolve):
     """
     Функция для выполнения одной итерации симплекс-метода.
-
-    Параметры:
-    c : list
-        Коэффициенты целевой функции.
-    A : list of lists
-        Матрица ограничений системы.
-    b : list
-        Вектор правых частей ограничений (свободные коэффициенты).
-    f : float
-        Текущее значение целевой функции.
-    simplex_resolve : tuple
-        Кортеж, содержащий информацию о разрешающем элементе:
-        (значение разрешающего элемента, строка, столбец).
-
-    Возврат:
-    new_c : list
-        Обновленные коэффициенты целевой функции.
-    new_A : list of lists
-        Обновленная матрица ограничений.
-    new_b : list
-        Обновленный вектор правых частей (свободные коэффициенты).
-    new_f : float
-        Обновленное значение целевой функции.
     """
-
     # Получаем значение разрешающего элемента
     new_simplex_resolve = 1 / simplex_resolve[0]
 
@@ -188,7 +190,7 @@ def simplex_table_iteration(c, A, b, f, simplex_resolve):
         if i == simplex_resolve[1]:  # Текущая строка разрешающего элемента
             new_A[i][simplex_resolve[2]] = new_simplex_resolve
         else:  # Остальные строки
-            new_A[i][simplex_resolve[2]] = A[i][simplex_resolve[2]] / simplex_resolve[0] * -1
+            new_A[i][simplex_resolve[2]] = (A[i][simplex_resolve[2]] / simplex_resolve[0] * -1)
 
     # Обновляем коэффициенты целевой функции для разрешающего столбца
     new_c[simplex_resolve[2]] = c[simplex_resolve[2]] / simplex_resolve[0] * -1
@@ -226,6 +228,7 @@ def simplex_table_iteration(c, A, b, f, simplex_resolve):
 
     return new_c, new_A, new_b, new_f
 
+
 def to_dual_task(c, A, b, minimize):
     """
     Преобразует заданные параметры для двойственной задачи линейного программирования.
@@ -244,7 +247,8 @@ def to_dual_task(c, A, b, minimize):
 
     return new_c, new_A, new_b, not minimize
 
-def simplexsus(minimize, c, A, b, f):
+
+def simplexsus(c, A, b, f, minimize):
     """
     Основная функция симплекс-метода. Выполняет проверку входных данных
     и находит решение.
@@ -258,12 +262,12 @@ def simplexsus(minimize, c, A, b, f):
             for i in range(len(c)):
                 c[i] *= -1
 
-        while (max(c) > 0 or (min(b) < 0)):
+        var_row, var_col = create_simplex_variables(A)  # Создание обозначений симплекс-таблицы
 
-            simplex_table = create_simplex_table(c, A, b, f)  # Создание симплекс-таблицы
-            print_simplex_table(simplex_table)  # Вывод симплекс-таблицы
-
-            simplex_resolve = find_simplex_resolve(c, A, b)  # Поиск и выбор разрешающего элемента
+        while (max(c) > 0) or (min(b) < 0):
+            simplex_table = create_simplex_table(c, A, b, f)        # Создание симплекс-таблицы
+            print_simplex_table(simplex_table, var_row, var_col)    # Вывод симплекс-таблицы
+            simplex_resolve = find_simplex_resolve(c, A, b)         # Поиск и выбор разрешающего элемента
 
             # Обработка результатов нахождения разрешающего элемента
             if simplex_resolve == ["not"]:
@@ -273,14 +277,19 @@ def simplexsus(minimize, c, A, b, f):
                 print("[ - ] Infinite number of solutions")
                 return 1
 
-            print("[ * ] The resolving element is found:", simplex_resolve)
+            print(
+                "[ * ] The resolving element is found:",
+                round(simplex_resolve[0], 2),
+                simplex_resolve[1:],
+            )
 
+            var_row, var_col = swap_variables(var_row, var_col, simplex_resolve)
             c, A, b, f = simplex_table_iteration(c, A, b, f, simplex_resolve)
 
         # Найдено оптимальное решение
         print("\n[ + ] OPTI ANS")
         simplex_table = create_simplex_table(c, A, b, f)  # Создание симплекс-таблицы
-        print_simplex_table(simplex_table)  # Вывод симплекс-таблицы
+        print_simplex_table(simplex_table, var_row, var_col)  # Вывод симплекс-таблицы
 
     else:
         print("[ - ] Check: BAD")
@@ -288,7 +297,7 @@ def simplexsus(minimize, c, A, b, f):
 
     if minimize:
         print("[ * ] The function goes to the minimum")
-        return f
+        return round(f, 2)
 
     print("[ * ] The function goes to the maximum")
-    return f * -1
+    return round(f * -1, 2)
